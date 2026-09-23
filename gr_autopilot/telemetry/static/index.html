@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gr-autopilot · live telemetry</title>
+<style>
+  :root { --bg:#0b0f14; --panel:#131a22; --line:#243040; --ink:#e6edf3; --dim:#8b98a5;
+          --good:#3fb950; --bad:#f85149; --accent:#58a6ff; --warn:#d29922; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size:14px; }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex;
+           align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; letter-spacing:.5px; }
+  header h1 span { color:var(--accent); }
+  .goal { color:var(--dim); flex:1; min-width:200px; }
+  .badge { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600;
+           border:1px solid var(--line); white-space:nowrap; }
+  .badge.outer { background:rgba(88,166,255,.15); color:var(--accent); border-color:var(--accent); }
+  .badge.inner { background:rgba(210,153,34,.15); color:var(--warn); border-color:var(--warn); }
+  .badge.dot::before { content:"●"; margin-right:6px; animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  main { padding:18px 20px; display:grid; gap:16px; max-width:1200px; margin:0 auto; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .card .k { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.7px; }
+  .card .v { font-size:26px; margin-top:6px; font-variant-numeric:tabular-nums; }
+  .card .v.good { color:var(--good); } .card .v.bad { color:var(--bad); }
+  .card .sub { color:var(--dim); font-size:11px; margin-top:2px; }
+  .plots { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .plots { grid-template-columns:1fr; } }
+  .plot { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .plot h2 { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.7px;
+             margin:0 0 8px; }
+  canvas { width:100%; height:230px; display:block; }
+  table { width:100%; border-collapse:collapse; }
+  .ledger { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+            overflow:hidden; }
+  .ledger h2 { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.7px;
+               margin:0; padding:12px 14px; border-bottom:1px solid var(--line); }
+  .tblwrap { max-height:260px; overflow:auto; }
+  th, td { text-align:left; padding:7px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--dim); font-weight:600; font-size:11px; position:sticky; top:0; background:var(--panel); }
+  td { font-variant-numeric:tabular-nums; }
+  tr.last td { background:rgba(88,166,255,.08); }
+  .pill { padding:1px 7px; border-radius:10px; font-size:11px; }
+  .pill.outer { background:rgba(88,166,255,.15); color:var(--accent); }
+  .pill.inner { background:rgba(210,153,34,.15); color:var(--warn); }
+  .v.mono { font-size:18px; }
+  .offline { color:var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>gr-<span>autopilot</span> · live telemetry</h1>
+  <div class="goal" id="goal">waiting for the agent…</div>
+  <div class="badge outer dot" id="loopbadge">— loop</div>
+</header>
+<main>
+  <div class="cards">
+    <div class="card"><div class="k">BER</div><div class="v" id="ber">–</div>
+      <div class="sub" id="berrors"></div></div>
+    <div class="card"><div class="k">Target BER</div><div class="v mono" id="target">–</div>
+      <div class="sub" id="feasible"></div></div>
+    <div class="card"><div class="k">EVM</div><div class="v mono" id="evm">–</div></div>
+    <div class="card"><div class="k">SNR est</div><div class="v mono" id="snr">–</div></div>
+    <div class="card"><div class="k">Structure</div><div class="v mono" id="modcod">–</div>
+      <div class="sub" id="freq"></div></div>
+  </div>
+  <div class="plots">
+    <div class="plot"><h2>Constellation (recovered symbols)</h2><canvas id="constel"></canvas></div>
+    <div class="plot"><h2>Spectrum (PSD, dB)</h2><canvas id="spectrum"></canvas></div>
+  </div>
+  <div class="ledger">
+    <h2>Edit ledger — what the agent changed, and what happened</h2>
+    <div class="tblwrap"><table>
+      <thead><tr><th>#</th><th>loop</th><th>structure</th><th>edit</th><th>BER</th>
+      <th>SNR</th><th>verdict</th></tr></thead>
+      <tbody id="ledger"></tbody>
+    </table></div>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+function fmtBER(x){ if(x==null) return "–"; if(x===0) return "0"; return x<1e-2 ? x.toExponential(1) : x.toFixed(3); }
+
+function setupCanvas(c){ const r=window.devicePixelRatio||1; const w=c.clientWidth, h=c.clientHeight;
+  c.width=w*r; c.height=h*r; const ctx=c.getContext("2d"); ctx.setTransform(r,0,0,r,0,0);
+  return {ctx,w,h}; }
+
+function drawConstellation(pts){
+  const {ctx,w,h}=setupCanvas($("constel")); ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, s=Math.min(w,h)/2*0.82;
+  ctx.strokeStyle="#243040"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(w,cy); ctx.moveTo(cx,0); ctx.lineTo(cx,h); ctx.stroke();
+  ctx.strokeStyle="#1a2230";
+  for(const g of [-1,-0.5,0.5,1]){ ctx.beginPath(); ctx.moveTo(cx+g*s,0); ctx.lineTo(cx+g*s,h);
+    ctx.moveTo(0,cy-g*s); ctx.lineTo(w,cy-g*s); ctx.stroke(); }
+  ctx.fillStyle="rgba(88,166,255,.75)";
+  for(const p of (pts||[])){ ctx.beginPath(); ctx.arc(cx+p[0]*s, cy-p[1]*s, 1.7, 0, 7); ctx.fill(); }
+}
+
+function drawSpectrum(spec){
+  const {ctx,w,h}=setupCanvas($("spectrum")); ctx.clearRect(0,0,w,h);
+  const f=spec&&spec.freqs||[], p=spec&&spec.psd_db||[]; const pad=6, floor=-80;
+  ctx.strokeStyle="#1a2230"; ctx.lineWidth=1;
+  for(let db=0; db>=floor; db-=20){ const y=pad+(-db/(-floor))*(h-2*pad);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  if(!f.length) return;
+  const X=i=> (i/(f.length-1))*w;
+  const Y=db=> pad+((-Math.max(db,floor))/(-floor))*(h-2*pad);
+  ctx.beginPath(); ctx.moveTo(X(0),h); ctx.lineTo(X(0),Y(p[0]));
+  for(let i=1;i<f.length;i++) ctx.lineTo(X(i),Y(p[i]));
+  ctx.lineTo(X(f.length-1),h); ctx.closePath();
+  ctx.fillStyle="rgba(63,185,80,.18)"; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(X(0),Y(p[0]));
+  for(let i=1;i<f.length;i++) ctx.lineTo(X(i),Y(p[i]));
+  ctx.strokeStyle="#3fb950"; ctx.lineWidth=1.6; ctx.stroke();
+}
+
+function renderLedger(rows){
+  const tb=$("ledger"); tb.innerHTML="";
+  const recent=(rows||[]).slice(-40);
+  recent.forEach((r,i)=>{ const m=r.metrics||{}; const tr=document.createElement("tr");
+    if(i===recent.length-1) tr.className="last";
+    const loop=(r.loop||"outer");
+    const ber=(m.BER!=null?m.BER:m.ber), snr=(m.SNR_est!=null?m.SNR_est:m.snr_db);
+    tr.innerHTML=`<td>${r.iteration??""}</td>`+
+      `<td><span class="pill ${loop}">${loop}</span></td>`+
+      `<td>${(r.structure_id||"").slice(0,20)}</td>`+
+      `<td>${(r.edit_description||"").slice(0,40)}</td>`+
+      `<td>${ber==null?"–":fmtBER(ber)}</td>`+
+      `<td>${snr==null?"–":(+snr).toFixed(1)}</td>`+
+      `<td>${r.verdict||""}</td>`;
+    tb.appendChild(tr); });
+  const wrap=tb.closest(".tblwrap"); if(wrap) wrap.scrollTop=wrap.scrollHeight;
+}
+
+function update(d){
+  const s=d.snapshot;
+  if(s){
+    $("goal").textContent = s.goal || "closed-loop optimization";
+    const m=s.metrics||{};
+    const berEl=$("ber"); berEl.textContent=fmtBER(m.ber);
+    berEl.className="v "+(m.feasible?"good":"bad");
+    $("target").textContent=fmtBER(m.target_ber);
+    $("feasible").textContent=m.feasible?"✓ meets target":"✗ over target";
+    $("feasible").style.color=m.feasible?"var(--good)":"var(--bad)";
+    $("evm").textContent=(m.evm_pct!=null?m.evm_pct.toFixed(1)+"%":"–");
+    $("snr").textContent=(m.snr_db!=null?m.snr_db.toFixed(1)+" dB":"–");
+    const st=s.structure||{};
+    $("modcod").textContent=(st.modcod||"–").toUpperCase();
+    $("freq").textContent=st.center_freq_hz?("@ "+(st.center_freq_hz/1e6).toFixed(3)+" MHz"):"";
+    const al=s.active_loop||{loop:"outer"}; const b=$("loopbadge");
+    b.className="badge dot "+(al.loop==="inner"?"inner":"outer");
+    b.textContent=(al.loop==="inner"?("BO inner"+(al.detail?" · "+al.detail:"")):"LLM outer"+(al.detail?" · "+al.detail:""));
+    drawConstellation(s.constellation); drawSpectrum(s.spectrum);
+  }
+  renderLedger(d.ledger);
+}
+
+async function poll(){
+  try{ const r=await fetch("/data",{cache:"no-store"}); update(await r.json());
+       $("goal").classList.remove("offline"); }
+  catch(e){ $("goal").classList.add("offline"); }
+}
+poll(); setInterval(poll, 600);
+window.addEventListener("resize", ()=>poll());
+</script>
+</body>
+</html>

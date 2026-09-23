@@ -1,0 +1,183 @@
+/* Self-hosted, not a CDN link: this console runs on a bench that may have no route to the
+   internet, and a webfont that silently falls back would take the tabular figures with it. */
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "tailwindcss";
+
+/* Instrument-panel dark theme by default (like a vector-signal-analyzer screen), with a light
+   theme for bright rooms and projectors under :root[data-theme="light"]. shadcn tokens map to the
+   palette; semantic good/bad/warn stay separate from the cyan brand accent. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
+  --color-spectrum: var(--spectrum);
+  --color-trace-1: var(--trace-1);
+  --color-trace-2: var(--trace-2);
+  --color-trace-3: var(--trace-3);
+  --color-trace-4: var(--trace-4);
+  --color-trace-5: var(--trace-5);
+  --color-grid: var(--grid);
+  --color-hardware: var(--hardware);
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-xl: 14px;
+}
+
+:root {
+  color-scheme: dark;       /* native scrollbars and form controls follow the theme */
+  --background: #080b10;
+  --foreground: #dbe4ee;
+  --card: #111823;
+  --card-foreground: #dbe4ee;
+  --muted: #0d141d;
+  --muted-foreground: #7d8b9a;
+  --border: #1e2a38;
+  --border-strong: #22384c; /* the primary-tier card edge */
+  --primary: #38bdf8;
+  --primary-foreground: #041016;
+  --good: #34d399;
+  --bad: #fb5a4b;
+  --warn: #f5b13d;
+  --spectrum: #4ade80;
+
+  /* Plot ink (design language §3). Ordered for first use and kept distinct from the semantic
+     roles, so a trace colour never accidentally reads as a verdict. BER deliberately keeps
+     --bad: it is the quantity under test and its colour should carry the result. */
+  --trace-1: #4ade80;
+  --trace-2: #38bdf8;
+  --trace-3: #f5b13d;
+  --trace-4: #c084fc;
+  --trace-5: #f472b6;
+  --grid: #16222f;          /* plot gridlines — was hard-coded in every renderer */
+  --ink-faint: #4a5b6c;     /* axis labels — likewise */
+  --hardware: #f5b13d;      /* provenance: radios. --muted-foreground means a model. */
+  --shadow: rgba(0, 0, 0, 0.9);    /* elevation: cards, popovers, dialogs */
+  --overlay: rgba(0, 0, 0, 0.7);   /* the scrim behind a dialog */
+
+  /* Type scale — eight steps, nothing between them (design language §3). */
+  --t-display: 34px;
+  --t-h1: 25px;
+  --t-h2: 18px;
+  --t-h3: 15px;
+  --t-body: 15px;
+  --t-small: 13px;
+  --t-micro: 11px;
+
+  /* Density. Compact mode rescales these two and nothing else: density changes spacing and type
+     step, never which information is present. */
+  --density-pad: 1;
+  --density-font: 1;
+}
+
+/* Light theme. Every value is the dark one's counterpart, darkened until it holds at least 4.5:1
+   on the page and on a card, so a verdict colour still reads as text; plot ink keeps the same
+   order and hue families so a trace means the same thing in both themes. Hex only: ink.ts
+   derives canvas transparency from these. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f3f5f8;
+  --foreground: #0f1b28;
+  --card: #ffffff;
+  --card-foreground: #0f1b28;
+  --muted: #e9eef3;
+  --muted-foreground: #526273;
+  --border: #d3dbe4;
+  --border-strong: #bfccd9;
+  --primary: #0369a1;
+  --primary-foreground: #ffffff;
+  --good: #047857;
+  --bad: #c0321f;
+  --warn: #a85400;
+  --spectrum: #15803d;
+
+  --trace-1: #15803d;
+  --trace-2: #0369a1;
+  --trace-3: #b45309;
+  --trace-4: #7e22ce;
+  --trace-5: #be185d;
+  --grid: #e2e8ef;
+  --ink-faint: #687888;
+  --hardware: #a85400;
+  --shadow: rgba(15, 27, 40, 0.22);
+  --overlay: rgba(15, 27, 40, 0.45);
+}
+
+:root[data-density="compact"] {
+  --density-pad: 0.72;
+  --density-font: 0.9;
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  /* Digits line up in every table, tile and axis readout. */
+  .font-mono, table, .tabular { font-variant-numeric: tabular-nums; }
+  html, body, #root { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-synthesis-weight: none;
+  }
+}
+
+/* Density, applied. Compact rescales the base type step and the padding of the surfaces that
+   carry repeated rows; nothing is hidden and no plot loses data. */
+:root[data-density="compact"] body { font-size: calc(15px * var(--density-font)); }
+:root[data-density="compact"] [data-slot="card"] { padding-block: calc(0.5rem * var(--density-pad)); }
+:root[data-density="compact"] td { padding-top: 3px; padding-bottom: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* Rendered documentation (the wiki body, injected as HTML) — styled from the same tokens as the
+   rest of the shell so a docs page is not a change of scenery. */
+.prose { max-width: 80ch; font-size: 14.5px; line-height: 1.65; color: var(--foreground); }
+.prose > :first-child { margin-top: 0; }
+.prose h2 { font-size: 19px; line-height: 1.3; margin: 30px 0 8px; padding-top: 10px; border-top: 1px solid var(--border); letter-spacing: -.2px; }
+.prose h3 { font-size: 16px; margin: 22px 0 6px; }
+.prose h4 { font-size: 14px; margin: 18px 0 4px; font-family: var(--font-mono); }
+.prose p, .prose li { margin: 0 0 10px; }
+.prose ul, .prose ol { padding-left: 22px; margin: 0 0 12px; }
+.prose li { margin-bottom: 4px; }
+.prose a { color: var(--primary); text-decoration: none; }
+.prose a:hover { text-decoration: underline; }
+.prose strong { color: var(--foreground); }
+.prose code { background: var(--muted); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 12.5px; }
+.prose pre { background: var(--muted); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; margin: 0 0 14px; }
+.prose pre code { background: none; padding: 0; font-size: inherit; }
+.prose table { border-collapse: collapse; font-size: 13px; margin: 8px 0 16px; display: block; max-width: 100%; overflow-x: auto; }
+.prose th, .prose td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.prose th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-foreground); font-weight: 600; white-space: nowrap; }
+.prose blockquote { margin: 8px 0 14px; padding: 2px 0 2px 14px; border-left: 2px solid var(--primary); color: var(--muted-foreground); }
+.prose blockquote p { margin-bottom: 8px; }
+.prose .admonition { border-left: 2px solid var(--warn); background: color-mix(in srgb, var(--muted) 70%, transparent); padding: 8px 12px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+.prose .admonition-title { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--warn); margin: 0 0 4px; }
+.prose img { max-width: 100%; border-radius: 8px; }
+.prose hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+.toc ul { list-style: none; margin: 0; padding: 0; }
+.toc ul ul { padding-left: 12px; }
+.toc li { margin: 2px 0; }
+.toc a { display: block; color: var(--muted-foreground); font-size: 12px; line-height: 1.4; text-decoration: none; padding: 1px 0; }
+.toc a:hover { color: var(--foreground); }
+
+/* <main> is the scroll container, so an anchored heading lands against its top padding rather
+   than flush with the edge. */
+.prose :where(h2, h3, h4)[id] { scroll-margin-top: 12px; }

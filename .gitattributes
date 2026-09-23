@@ -1,0 +1,15 @@
+# Normalize line endings to LF in the repository regardless of contributor platform.
+* text=auto eol=lf
+
+# --- GitHub language statistics (linguist) -----------------------------------
+# This is a Python research project. Without these rules GitHub weighs the
+# committed 240 KB minified React bundle and reports the repo as JavaScript.
+#
+# dashboard/dist/ is committed ON PURPOSE — the bench host has no Node toolchain
+# and the telemetry server serves the pre-built bundle directly — but it is
+# generated output, so keep it out of the language stats and collapse it in diffs.
+dashboard/dist/**          linguist-generated=true
+dashboard/recording.json   linguist-generated=true
+
+# Measured bench data is an artifact, not source.
+docs/data/*.json           linguist-generated=true

@@ -1,0 +1,108 @@
+{
+  "symbol_rate_hz": 260500.0,
+  "acq_range_hz": 39075.0,
+  "rows": [
+    {
+      "center_freq_hz": 400000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.000732421875,
+      "cfo_hz": 190.7958984375,
+      "ppm": 0.47698974609375006,
+      "ber": 0.00010788650339842486,
+      "in_range": true,
+      "preamble_evm_pct": 7.919331047900329,
+      "frame_sync_metric": 0.9713703265702397
+    },
+    {
+      "center_freq_hz": 700000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.0009765625,
+      "cfo_hz": 254.39453125,
+      "ppm": 0.3634207589285714,
+      "ber": 0.00024721878862793575,
+      "in_range": true,
+      "preamble_evm_pct": 6.8871359828085374,
+      "frame_sync_metric": 1.13340331187759
+    },
+    {
+      "center_freq_hz": 900000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.0009765625,
+      "cfo_hz": 254.39453125,
+      "ppm": 0.2826605902777778,
+      "ber": 0.0006064281382656155,
+      "in_range": true,
+      "preamble_evm_pct": 6.6536659304583665,
+      "frame_sync_metric": 0.9907786838037073
+    },
+    {
+      "center_freq_hz": 1200000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.00146484375,
+      "cfo_hz": 381.591796875,
+      "ppm": 0.3179931640625,
+      "ber": 0.0011536686663590216,
+      "in_range": true,
+      "preamble_evm_pct": 7.2941078863180815,
+      "frame_sync_metric": 0.863396976593891
+    },
+    {
+      "center_freq_hz": 1500000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.001708984375,
+      "cfo_hz": 445.1904296875,
+      "ppm": 0.2967936197916667,
+      "ber": 0.00047810288774144193,
+      "in_range": true,
+      "preamble_evm_pct": 6.063126052400632,
+      "frame_sync_metric": 0.9575043769146401
+    },
+    {
+      "center_freq_hz": 1800000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.002197265625,
+      "cfo_hz": 572.3876953125,
+      "ppm": 0.3179931640625,
+      "ber": 0.0006065016982047549,
+      "in_range": true,
+      "preamble_evm_pct": 5.4914882615309715,
+      "frame_sync_metric": 0.9981703824897132
+    },
+    {
+      "center_freq_hz": 2100000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.00244140625,
+      "cfo_hz": 635.986328125,
+      "ppm": 0.3028506324404762,
+      "ber": 0.0001483679525222552,
+      "in_range": true,
+      "preamble_evm_pct": 4.986684238704,
+      "frame_sync_metric": 1.0224041161601372
+    },
+    {
+      "center_freq_hz": 3000000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.00341796875,
+      "cfo_hz": 890.380859375,
+      "ppm": 0.2967936197916667,
+      "ber": 0.0006744604316546763,
+      "in_range": true,
+      "preamble_evm_pct": 4.08135707723234,
+      "frame_sync_metric": 0.9944238208739559
+    },
+    {
+      "center_freq_hz": 3500000000.0,
+      "locked": true,
+      "cfo_cyc_per_sym": 0.00390625,
+      "cfo_hz": 1017.578125,
+      "ppm": 0.29073660714285715,
+      "ber": 0.0006464124111182935,
+      "in_range": true,
+      "preamble_evm_pct": 4.793627148812051,
+      "frame_sync_metric": 0.9955096295627819
+    }
+  ],
+  "fitted_ppm": 0.2997821018034141,
+  "linearity_r2": 0.9852707403344733,
+  "predicted_ceiling_hz": 130344672897.19627
+}

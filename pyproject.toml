@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gr-autopilot"
+version = "0.0.1"
+description = "Agentic framework for closed-loop flowgraph synthesis with hardware-in-the-loop feedback"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "Stepan Mazokha", email = "smazokha2016@fau.edu" },
+    { name = "George Sklivanitis" },
+]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "numpy>=1.21",
+    "scipy>=1.8",
+]
+
+# NOTE: GNU Radio (3.10.x) and pyadi-iio/libiio are SYSTEM packages, not pip-installable
+# here. They are runtime requirements for the GNU-Radio sim backend and (later) the Pluto
+# hardware backend. The scoring layer and the pure-numpy sim backend need neither.
+
+[project.urls]
+Repository = "https://github.com/C2A2-at-Florida-Atlantic-University/gr-autopilot"
+
+[project.optional-dependencies]
+dev = ["pytest>=6"]
+# Rendering the scope PNGs (perception.render / diagnose_signal(render_path=...)) and the paper
+# figures needs matplotlib. It is imported lazily, so the core loop and the tool surface stay
+# dependency-free (numpy/scipy only); install this extra only to draw pictures.
+viz = ["matplotlib>=3.5"]
+
+[tool.setuptools.packages.find]
+include = ["gr_autopilot*"]
+
+# The telemetry server's stdlib fallback page is data, not a module: without this it is
+# silently dropped from a built wheel and default_webroot() serves an empty directory.
+[tool.setuptools.package-data]
+"gr_autopilot.telemetry" = ["static/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "gnuradio: test requires GNU Radio to be importable",
+    "hardware: test requires attached SDR hardware",
+]

@@ -1,0 +1,55 @@
+# --- External reference material (kept locally, not part of this project) ---
+/reference/
+/repos/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+# ...but the dashboard's built React bundle IS committed, so the bench serves it with no Node.
+!dashboard/dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- Node (a stray npm install outside dashboard/; dashboard/.gitignore covers its own) ---
+node_modules/
+
+# --- Runtime artifacts ---
+/artifacts/
+/runs/
+*.sigmf-data
+*.sigmf-meta
+
+# --- Secrets / local machine config (NEVER commit) ---
+# Nothing here today — the bench URIs in config/bench.yaml are non-secret RFC1918
+# addresses and device access is via ssh aliases in the operator's ~/.ssh/config,
+# which is not part of this repo. These rules are preventive.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+id_rsa*
+.netrc
+secrets.yaml
+config/*.local.yaml
+
+# --- Editors / OS (root-level; dashboard/.gitignore covers the frontend subtree) ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.sw?
+*~
+
+# bearer token for a network-bound daemon (--token "$(cat config/mcp.token)")
+config/*.token

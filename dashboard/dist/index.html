@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" style="background:#080b10">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>%F0%9F%93%A1</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080b10" />
+    <script>
+      // Apply a saved light theme before first paint, so a reload does not flash the dark page.
+      // ThemeToggle owns the choice from then on; the colour matches --background in index.css.
+      try {
+        if (localStorage.getItem("gra.theme") === "light") {
+          document.documentElement.dataset.theme = "light"
+          document.documentElement.style.background = "#f3f5f8"
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f3f5f8")
+        }
+      } catch (e) {}
+    </script>
+    <title>gr-autopilot · telemetry</title>
+    <script type="module" crossorigin src="./assets/index-C_xpQ8Dj.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-bU-varTd.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

@@ -1,0 +1,132 @@
+# Bench topology — what hardware exists, what role each unit holds, and how it is connected.
+#
+# This file is the SECOND source of truth about the bench. The daemon reads each radio's identity
+# from the hardware over libiio and checks it against what is declared here; a disagreement is a
+# fault that stops experiments rather than a warning nobody reads. That cross-check exists because
+# a single unverifiable source failed exactly this way: the daemon served fabricated device
+# manifests while transmitting on real radios, and nothing could contradict them.
+#
+# NO credentials here: device access is via SSH aliases `pluto2` / `pluto3` (see the operator's
+# ~/.ssh/config) and via IIO over the URIs below. Device facts were read from each unit
+# (2026-07-21, re-confirmed 2026-09-07). The two Plutos are NOT identical: pluto2 is hacked to
+# AD9364 (extended range); pluto3 is vanilla AD9363A.
+#
+# Three kinds of claim live in this file, and they are not equally trustworthy:
+#   * serial / chip / firmware / tuning range  -> the daemon VERIFIES these against the hardware.
+#   * which radio actually reaches which        -> verifiable only by transmitting (not yet done).
+#   * whether the chamber contains the signal   -> NOT verifiable by any measurement from here.
+#                                                  Operator's word, recorded as an attestation.
+version: 1
+name: bench-2pluto-hackrf
+
+attestation:
+  medium: anechoic
+  antennas_attached: true
+  shielded: true           
+  operator: smazokha2016@fau.edu
+  date: 2026-09-07
+  statement: 
+
+devices:
+  pluto2:
+    kind: pluto
+    role: transmitter
+    iio_uri: "ip:192.168.2.1"
+    host_iface_ip: "192.168.2.10"
+    ssh_alias: pluto2
+    chip: ad9364            # physically AD9363, hacked (compatible=ad9364) to present as AD9364
+    hacked: true
+    tuning_range_hz: [70.0e6, 6.0e9]
+    fw_version: "v0.39"
+    serial: "10447318ac0f000301000700a56917726b"
+    xo_correction: 40000145
+
+  pluto3:
+    kind: pluto
+    role: receiver          # also hosts the framework-owned grader
+    iio_uri: "ip:192.168.3.1"
+    host_iface_ip: "192.168.3.10"
+    ssh_alias: pluto3
+    chip: ad9363a           # vanilla, not hacked
+    hacked: false
+    tuning_range_hz: [325.0e6, 3.8e9]
+    fw_version: "v0.32"
+    serial: "10447392da110010f0ff2300ef2af86e6a"
+    xo_correction: 40000119
+
+  hackrf1:
+    kind: hackrf
+    role: jammer            # framework/operator property — never on the agent's tool surface
+    serial: "0000000000000000436c63dc38a34463"
+    fw_version: "2024.02.1"
+    tuning_range_hz: [1.0e6, 6.0e9]
+
+path:
+  - {from: pluto2.antenna,  medium: free_space, to: pluto3.antenna}
+  - {from: hackrf1.antenna, medium: free_space, to: pluto3.antenna}
+
+geometry:                   # fill in to make runs reproducible; nothing reads these yet
+  separation_m: null        # pluto2 -> pluto3   (NOT YET MEASURED)
+  jammer_separation_m: null # hackrf1 -> pluto3  (NOT YET MEASURED)
+  antennas: >
+    Standard dual-band WiFi dipoles (2.4 / 5 GHz), nominally 2-3 dBi, vertically polarised.
+    Consequence for band coverage: resonant at 2.4 GHz, electrically short below roughly 2.3 GHz,
+    and the receiver's 3.8 GHz ceiling puts the 5 GHz resonance out of reach. The RADIOS tune
+    325 MHz - 3.8 GHz; the ANTENNAS make only the 2.4 GHz neighbourhood efficient. That is
+    deliberately NOT encoded as a limit: the band envelope is measured rather than assumed, so
+    the rolloff comes out as a result instead of a declaration.
+
+common:
+  # The link can only use what BOTH radios can reach: the hacked transmitter goes down to 70 MHz,
+  # but the vanilla receiver cannot hear below 325 MHz, so 325 MHz is the floor. Derived from the
+  # ranges above; stated here so a narrower operator limit can be imposed.
+  matched_tuning_range_hz: [325.0e6, 3.8e9]
+
+  # Operating band, moved off ISM on 2026-09-07. The chamber hosts a second, unrelated experiment
+  # radiating WiFi and Bluetooth across 2402-2480, so the link now runs BELOW that band.
+  #
+  # Chosen on measurement, not assumption. Link SNR at fixed power across the flanks:
+  #   2320  19.49   2350  19.07   2370  20.04   2390  19.79   2400  18.71
+  #   2500  15.13   2550  10.40   2600  10.06
+  # Below ISM costs nothing against the 2.4 GHz dipoles; above it the antennas roll off hard
+  # (-3.6 dB by 2500, -8.6 dB by 2550). 2370 also measures STEADIER than 2400 (sd 0.29 vs 1.83) --
+  # the old reference channel sat close enough to the neighbour to be disturbed by it.
+  #
+  # 10 MHz channel spacing against a ~2 MHz link: wide enough that a hop set cannot self-overlap,
+  # and the whole set clears 2402 with margin. Ambient across 2300-2398 peaks at 2.5 dB.
+  operating_band_hz: [2.350e9, 2.390e9]
+  demo_center_freq_hz: 2.370e9
+  hop_channels_hz: [2.360e9, 2.370e9, 2.380e9, 2.390e9]
+  avoid_band_hz: [2.400e9, 2.4835e9]      # ISM: the other experiment's WiFi/BLE lives here
+
+  # Measured on this bench, BPSK/16-QAM at 2.4 GHz, >=3 runs x 100k bits per point.
+  # The daemon starts the worker at these unless overridden on the command line. They are NOT
+  # transferable: they were re-measured after the move because the coaxial values were wrong here.
+  calibration:
+    rx_gain_db: 45.0        # optimum: SNR 16.97, sd 0.22, BER 5.6e-4, 0 unstable runs of 5
+    tx_atten_db: 38.0       # ~19 dB SNR — comfortably 16-QAM capable, inside the stable region
+    rx_gain_window_db: [35.0, 50.0]
+    # BPSK SNR expected at the settings above, for --verify-path to compare against. Not an
+    # absolute path loss: neither radio is power calibrated, so an absolute figure would be
+    # invented. This detects CHANGE — a bench that read 20 dB and now reads 6 dB has moved,
+    # whatever the true loss is. Measured 19.98 / 20.67 dB on two startup checks.
+    expected_snr_db: 20.0
+    # PSAM: a known pilot every N payload symbols, used to resolve the 90-degree carrier
+    # ambiguity that the blind decision-directed loop settles into at marginal SNR. Coded 16-QAM
+    # is unusable without it — a slip permutes every symbol's bits and Viterbi decodes garbage,
+    # measured as coded BER 9.2e-2 where uncoded reached 2.8e-4. The machinery already existed
+    # (link/sync.py psam_*) and was simply never reachable from the daemon.
+    pilot_spacing: 16
+    notes: >
+      Two failure modes bracket the usable window, and the midpoint is not obvious from either.
+      At or below 30 dB gain the signal does not fill the ADC and quantization dominates -- the
+      AGC cannot recover it, being after the converter. At 55 dB and above the front end
+      intermittently overloads: 1-3 runs in 5 collapse to negative SNR while the mean still looks
+      plausible, so a two-run sweep picks 70 dB as "best". Three runs per point is the floor on
+      this bench; the earlier coaxial default of 40 dB is usable but ~6x worse on BER than 45.
+      Transmit attenuation maps to SNR at about 0.78 dB per dB over 34-58 dB, with a hard cliff
+      at 58-60. Estimate scatter is operating-point dependent: sd 0.14 dB at 45 dB attenuation,
+      but ~2 dB at 30 dB where the estimator is least reliable.
+  clock_note: >
+    Independent oscillators with different xo_correction and firmware -> real carrier
+    frequency offset between the units (the +/-25 ppm CFO story), now asymmetric.

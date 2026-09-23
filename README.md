@@ -1,5 +1,5 @@
 # gr-autopilot: An Agentic Framework for Closed-Loop Flowgraph Synthesis with Hardware-in-the-Loop Feedback
-To be presented at GRCon26, September 2026 [GRCon26 Page](https://events.gnuradio.org/)<br/>
+Presented at GRCon26, September 2026 ([GRCon26 Page](https://events.gnuradio.org/event/28/contributions/867/))<br/>
 Authors: Stepan Mazokha, Gabriel Garcia, George Sklivanitis (Florida Atlantic University)<br/>
 Paper: coming soon<br/>
 Presentation Recording: coming soon
